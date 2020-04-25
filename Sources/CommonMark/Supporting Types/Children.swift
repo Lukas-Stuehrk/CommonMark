@@ -140,39 +140,29 @@ extension Container where ChildNode: Node {
 
 // MARK: -
 
-extension Document: Container {
+public protocol ContainerOfBlocks {}
+extension ContainerOfBlocks {
     public typealias ChildNode = Block & Node
 }
-extension BlockQuote: Container {
-    public typealias ChildNode = Block & Node
-}
+
+extension Document: Container, ContainerOfBlocks {}
+extension BlockQuote: Container, ContainerOfBlocks {}
 
 // MARK: -
 
-extension Heading: Container {
+public protocol ContainerOfInlineElements {}
+extension ContainerOfInlineElements {
     public typealias ChildNode = Inline & Node
 }
-extension Paragraph: Container {
-    public typealias ChildNode = Inline & Node
-}
-extension HTMLBlock: Container {
-    public typealias ChildNode = Inline & Node
-}
-extension CodeBlock: Container {
-    public typealias ChildNode = Inline & Node
-}
-extension ThematicBreak: Container {
-    public typealias ChildNode = Inline & Node
-}
-extension Strong: Container {
-    public typealias ChildNode = Inline & Node
-}
-extension Emphasis: Container {
-    public typealias ChildNode = Inline & Node
-}
-extension Link: Container {
-    public typealias ChildNode = Inline & Node
-}
+
+extension Heading: Container, ContainerOfInlineElements {}
+extension Paragraph: Container, ContainerOfInlineElements {}
+extension HTMLBlock: Container, ContainerOfInlineElements {}
+extension CodeBlock: Container, ContainerOfInlineElements {}
+extension ThematicBreak: Container, ContainerOfInlineElements {}
+extension Strong: Container, ContainerOfInlineElements {}
+extension Emphasis: Container, ContainerOfInlineElements {}
+extension Link: Container, ContainerOfInlineElements {}
 
 // MARK: -
 
