@@ -107,6 +107,37 @@ public class Node: Codable {
         return Node.create(for: cmark_node_parent(cmark_node))
     }
 
+    // MARK: - Rendering
+
+    /**
+     Render a Node into a given format with the specified options.
+
+     - Parameters:
+        - format: The rendering format
+        - options: The rendering options
+        - width: The column width used to wrap lines for rendered output
+                 (`.commonmark`, `.man`, and `.latex` formats only).
+                 Must be a positive number.
+                 Pass `0` to prevent line wrapping.
+     - Returns: The rendered text.
+     */
+    public func render(format: Document.RenderingFormat, options: Document.RenderingOptions = [], width: Int = 0) -> String {
+        precondition(width >= 0)
+
+        switch format {
+        case .commonmark:
+            return String(cString: cmark_render_commonmark(cmark_node, options.rawValue, Int32(clamping: width)))
+        case .html:
+            return String(cString: cmark_render_html(cmark_node, options.rawValue))
+        case .xml:
+            return String(cString: cmark_render_xml(cmark_node, options.rawValue))
+        case .latex:
+            return String(cString: cmark_render_latex(cmark_node, options.rawValue, Int32(clamping: width)))
+        case .manpage:
+            return String(cString: cmark_render_man(cmark_node, options.rawValue, Int32(clamping: width)))
+        }
+    }
+
     // MARK: - Codable
 
     public required convenience init(from decoder: Decoder) throws {
