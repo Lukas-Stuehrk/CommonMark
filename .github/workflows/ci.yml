@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [TestCI]
   pull_request:
     branches: [master]
 
@@ -21,7 +21,7 @@ jobs:
 
     strategy:
       matrix:
-        swift: ["5.2"]
+        swift: ["5.3.1"]
 
     container:
       image: swift:${{ matrix.swift }}
