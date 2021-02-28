@@ -1,25 +1,5 @@
 import cmark
 
-struct Children: Sequence {
-    var cmark_node: OpaquePointer
-
-    init(of node: Node) {
-        cmark_node = node.cmark_node
-    }
-
-    init(of document: Document) {
-        cmark_node = document.cmark_node
-    }
-
-    func makeIterator() -> AnyIterator<Node> {
-        var iterator = CMarkNodeChildIterator(cmark_node)
-        return AnyIterator {
-            guard let child = iterator.next() else { return nil }
-            return Node.create(for: child)
-        }
-    }
-}
-
 struct CMarkNodeChildIterator: IteratorProtocol {
     var current: OpaquePointer!
 
@@ -36,14 +16,13 @@ struct CMarkNodeChildIterator: IteratorProtocol {
 
 // MARK: -
 
-public protocol ContainerOfBlocks: Node {
-    var children: [Block & Node] { get }
+public protocol Container: Node {
+    associatedtype ChildNode
+
+    var children: [ChildNode] { get }
 }
 
-extension Document: ContainerOfBlocks {}
-extension BlockQuote: ContainerOfBlocks {}
-
-extension ContainerOfBlocks {
+extension Container where ChildNode: Node {
     /**
      The block elements contained by the node.
 
@@ -51,9 +30,9 @@ extension ContainerOfBlocks {
                   Use the `removeChildren()` method to detach and access children
                   beyond the lifetime of their parent.
      */
-    public var children: [Block & Node] {
+    public var children: [ChildNode] {
         get {
-            return Children(of: self).compactMap { $0 as? Block & Node }
+            return childNodes.compactMap { $0 as? ChildNode }
         }
 
         set {
@@ -75,7 +54,7 @@ extension ContainerOfBlocks {
      - Returns: `true` if successful, otherwise `false`.
      */
     @discardableResult
-    public func prepend(child: Block & Node) -> Bool {
+    public func prepend(child: ChildNode) -> Bool {
         guard cmark_node_prepend_child(cmark_node, child.cmark_node) == 1 else { return false }
 
         child.managed = false
@@ -91,7 +70,7 @@ extension ContainerOfBlocks {
      - Returns: `true` if successful, otherwise `false`.
     */
     @discardableResult
-    public func append(child: Block & Node) -> Bool {
+    public func append(child: ChildNode) -> Bool {
         guard cmark_node_append_child(cmark_node, child.cmark_node) == 1 else { return false }
 
         child.managed = false
@@ -108,7 +87,7 @@ extension ContainerOfBlocks {
      - Returns: `true` if successful, otherwise `false`.
     */
     @discardableResult
-    public func insert(child: Block & Node, before sibling: Block & Node) -> Bool {
+    public func insert(child: ChildNode, before sibling: ChildNode) -> Bool {
         guard cmark_node_insert_before(sibling.cmark_node, child.cmark_node) == 1 else { return false }
 
         child.managed = false
@@ -125,7 +104,7 @@ extension ContainerOfBlocks {
      - Returns: `true` if successful, otherwise `false`.
     */
     @discardableResult
-    public func insert(child: Block & Node, after sibling: Block & Node) -> Bool {
+    public func insert(child: ChildNode, after sibling: ChildNode) -> Bool {
         guard cmark_node_insert_after(sibling.cmark_node, child.cmark_node) == 1 else { return false }
 
         child.managed = false
@@ -142,7 +121,7 @@ extension ContainerOfBlocks {
      - Returns: `true` if successful, otherwise `false`.
     */
     @discardableResult
-    public func replace(child: Block & Node, with replacement: Block & Node) -> Bool {
+    public func replace(child: ChildNode, with replacement: ChildNode) -> Bool {
         guard cmark_node_replace(child.cmark_node, replacement.cmark_node) == 1 else { return false }
 
         replacement.managed = false
@@ -159,7 +138,7 @@ extension ContainerOfBlocks {
      - Returns: `true` if successful, otherwise `false`.
      */
     @discardableResult
-    public func remove(child: Block & Node) -> Bool {
+    public func remove(child: ChildNode) -> Bool {
         guard child.parent == self else { return false }
 
         child.unlink()
@@ -173,8 +152,8 @@ extension ContainerOfBlocks {
      - Returns: An array of block structure elements.
      */
     @discardableResult
-    public func removeChildren() -> [Block & Node] {
-        var children: [Block & Node] = []
+    public func removeChildren() -> [ChildNode] {
+        var children: [ChildNode] = []
 
         for child in self.children {
             guard remove(child: child) else { continue }
@@ -184,6 +163,15 @@ extension ContainerOfBlocks {
         return children
     }
 }
+
+
+public protocol ContainerOfBlocks: Container where ChildNode == Block & Node {
+
+}
+
+extension Document: ContainerOfBlocks {}
+extension BlockQuote: ContainerOfBlocks {}
+
 
 // MARK: -
 
@@ -210,7 +198,7 @@ extension ContainerOfInlineElements {
      */
     public var children: [Inline & Node] {
         get {
-            return Children(of: self).compactMap { $0 as? Inline & Node }
+            return childNodes.compactMap { $0 as? Inline & Node }
         }
 
         set {
@@ -354,7 +342,7 @@ extension List {
      */
     public var children: [Item] {
         get {
-            return Children(of: self).compactMap { $0 as? Item }
+            return childNodes.compactMap { $0 as? Item }
         }
 
         set {
@@ -497,7 +485,7 @@ extension List.Item {
      */
     public var children: [Node] {
         get {
-            return Children(of: self).map { $0 }
+            return childNodes.map { $0 }
         }
 
         set {

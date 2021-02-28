@@ -10,6 +10,10 @@ public class Node: Codable {
     /// Whether the underlying `cmark_node` should be freed upon deallocation.
     var managed: Bool = false
 
+    private(set) var childNodes: [Node]
+
+    public private(set) weak var parent: Node?
+
     /**
      Creates a node from a `cmark_node` pointer.
 
@@ -17,6 +21,18 @@ public class Node: Codable {
      */
     required init(_ cmark_node: OpaquePointer) {
         self.cmark_node = cmark_node
+
+        var iterator = CMarkNodeChildIterator(cmark_node)
+        var nodes = [Node]()
+        while let cmark_node = iterator.next(), let node = Node.create(for: cmark_node) {
+            nodes.append(node)
+        }
+        childNodes = nodes
+
+        for child in childNodes {
+            child.parent = self
+        }
+
         assert(type(of: self) != Node.self)
         assert(cmark_node_get_type(cmark_node) == type(of: self).cmark_node_type)
     }
@@ -31,7 +47,7 @@ public class Node: Codable {
     }
 
     deinit {
-        guard managed else { return }
+        childNodes = []
         cmark_node_free(cmark_node)
     }
 
@@ -105,11 +121,6 @@ public class Node: Codable {
         let end = Document.Position(line: max(start.line, numericCast(cmark_node_get_end_line(cmark_node))), column: max(start.column, numericCast(cmark_node_get_end_column(cmark_node))))
 
         return start...end
-    }
-
-    /// The parent of the element, if any.
-    public var parent: Node? {
-        return Node.create(for: cmark_node_parent(cmark_node))
     }
 
     // MARK: - Rendering

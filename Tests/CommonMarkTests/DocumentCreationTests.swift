@@ -21,4 +21,16 @@ final class DocumentCreationTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
     }
+
+    func testCrashingChild() throws {
+        var heading: Heading?
+        try autoreleasepool {
+            var document: Document? = try Document(Fixtures.udhr)
+            heading = document!.children.first! as? Heading
+            document = nil
+        }
+
+        // Will crash because of use after free.
+        XCTAssertEqual("# [Universal Declaration of Human Rights][udhr]", heading?.render(format: .commonmark))
+    }
 }
